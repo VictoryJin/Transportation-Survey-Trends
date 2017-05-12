@@ -1,0 +1,12 @@
+---
+title: "Data_Analysis"
+author: "Victor Yoolim Jin, 22612692"
+date: '2017 5 10 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd("Google Drive/JtoS/Senior/Spring 2017/Stat 152/Final Project/cleanedDat/")
+library("survey")
+```
+

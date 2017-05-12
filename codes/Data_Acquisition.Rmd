@@ -1,0 +1,43 @@
+---
+title: "Data Acquisition"
+author: "Victor Yoolim Jin, 22612692"
+date: '2017 4 27 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd("rawDat/")
+library(ggplot2)
+```
+
+```{r data cleansing}
+#importing raw data
+raw_dat <- read.csv("rawDat/PERV2PUB.CSV")
+nrow(raw_dat)
+#choosing columns with only the variables in question
+initial.dat <- raw_dat[,c("HOUSEID", "PERSONID","VARSTRAT","GCDWORK", "WKFTPT", "HH_RACE", "WKFTPT", "WKRMHM", "DRIVER", "DTCOST", "DTCONJ", "R_SEX", "R_AGE", "HBHUR", "WRKCOUNT", "HHFAMINC")]
+#choosing those who work, and have stated distances, fulltime
+fulltime <- subset(initial.dat, WKFTPT == 1 & GCDWORK > 0)
+fulltime$PERSONID <- paste0(fulltime$HOUSEID, "-", fulltime$PERSONID)
+fulltime$HOUSEID <- NULL
+#choosing those who work, and have stated distances, parttime
+parttime <- subset(initial.dat, WKFTPT == 2 & GCDWORK > 0)
+parttime$PERSONID <- paste0(parttime$HOUSEID, "-", parttime$PERSONID)
+parttime$HOUSEID <- NULL
+```
+
+```{r basic vis}
+dat1 <- subset(fulltime, R_SEX == 1)
+dat2 <- subset(fulltime, R_SEX == 2)
+ggplot(dat1, aes(x=log(GCDWORK))) + geom_histogram(bins = 50) + geom_histogram(data = dat2, color = "red", bins = 50) + ggtitle("Full-time workers' log(distance) to Work")
+
+
+dat3 <- subset(parttime, R_SEX == 1)
+dat4 <- subset(parttime, R_SEX == 2)
+ggplot(dat3, aes(x=log(GCDWORK))) + geom_histogram(bins = 50) + geom_histogram(data = dat4, color = "red", bins = 50) + ggtitle("Part-time workers' log(distance) to Work")
+```
+
+```{r, eval = FALSE}
+write.csv(fulltime, "CleanedDat/fulltime.csv")
+write.csv(parttime, "CleanedDat/parttime.csv")
+```

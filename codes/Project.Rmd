@@ -1,0 +1,481 @@
+---
+title: "Stat 152 Project"
+author: "Sandra Herchen"
+date: ""
+output: 
+  html_document:
+    fig_height: 3
+    fig_width: 5
+---
+<!-- Don't edit in between this line and the one below -->
+```{r include=FALSE}
+# Don't delete this chunk if you are using the DataComputing package
+library(DataComputing)
+```
+*Source file* 
+```{r, results='asis', echo=FALSE}
+includeSourceDocuments()
+```
+<!-- Don't edit the material above this line -->
+
+```{r}
+library(survey)
+library(printr)
+complete <- read.csv("/Users/sandraherchen/Documents/College Classes/Statistics 152/Ascii/final.csv")
+```
+
+```{r,fig.width=12,fig.height=9}
+###########Town and Country###########
+tc <- complete %>%
+  filter(urban == "TC")
+
+n <- nrow(tc)
+N <- 45041531
+
+tc$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = tc) 
+
+tc_mean<-svymean(~work_distance,srs_design)
+tc_SE<-SE(svymean(~work_distance, srs_design))
+tc_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Suburban###########
+s <- complete %>%
+  filter(urban == "S")
+
+n <- nrow(s)
+N <- 27430457
+
+s$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = s) 
+
+s_mean<-svymean(~work_distance,srs_design)
+s_SE<-SE(svymean(~work_distance, srs_design))
+s_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Second City###########
+c <- complete %>%
+  filter(urban == "C")
+
+n <- nrow(c)
+N <- 20632917
+
+c$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = c) 
+
+c_mean<-svymean(~work_distance,srs_design)
+c_SE<-SE(svymean(~work_distance, srs_design))
+c_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Urban###########
+u <- complete %>%
+  filter(urban == "U")
+
+n <- nrow(u)
+N <- 19964251
+
+u$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = u) 
+
+u_mean<-svymean(~work_distance,srs_design)
+u_SE<-SE(svymean(~work_distance, srs_design))
+u_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Unassigned###########
+x <- complete %>%
+  filter(urban == "X")
+
+n <- nrow(x)
+N <- 8899
+
+x$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = x) 
+
+x_mean<-svymean(~work_distance,srs_design)
+x_SE<-SE(svymean(~work_distance, srs_design))
+x_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Combined###########
+Mean<-c(c_mean, s_mean, tc_mean, u_mean, x_mean)
+SE<-c(c_SE,s_SE,tc_SE,u_SE,x_SE)
+CI<-rbind(c_CI,s_CI,tc_CI,u_CI,x_CI)
+
+combined<-cbind(Mean, SE, CI)
+rownames(combined)<-c("Second City", "Suburban", "Town and Country", 
+                  "Urban","Unassigned")
+combined
+
+complete$urban <- as.character(complete$urban)
+complete$urban[complete$urban == "C"] <- "Second City"
+complete$urban[complete$urban == "S"] <- "Suburban"
+complete$urban[complete$urban == "TC"] <- "Town & Country"
+complete$urban[complete$urban == "U"] <- "Urban"
+complete$urban[complete$urban == "X"] <- "Unassigned"
+
+combined <- as.data.frame(combined)
+combined$lower_bound <- c(8,10,13,4,-10)
+combined$upper_bound <- c(19,22,22,16,19)
+combined$type <- c("Second City","Suburban","Town and Country","Urban","Unassigned")
+
+combined %>%
+  ggplot(aes(x = type)) +
+  geom_boxplot(
+    aes(ymin =lower_bound,lower = `2.5 %`,middle = Mean,upper=`97.5 %`,ymax=upper_bound),
+    stat = "identity", fill = "#4271AE"
+  ) +
+  scale_y_continuous(name = "Distance of Travel to Work by Settlement",
+                     limits = c(-10,24)) +
+  xlab("Type of Settlement") +
+  labs(title = "Travel Distances by Settlement") + 
+  theme(axis.text = element_text(size=10),
+        axis.title = element_text(size = 15),
+        title = element_text(size = 20))
+
+urban_test = lm(work_distance ~ urban, data = complete)
+
+anova(urban_test)
+```
+
+```{r,fig.width=12,fig.height=9}
+###########White###########
+white <- complete %>%
+  filter(race == 1)
+
+n <- nrow(white)
+N <- 86740797
+
+white$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = white) 
+
+white_mean<-svymean(~work_distance,srs_design)
+white_SE<-SE(svymean(~work_distance, srs_design))
+white_CI<-confint(svymean(~work_distance, srs_design))
+
+###########African American, Black###########
+black <- complete %>%
+  filter(race == 2)
+
+n <- nrow(black)
+N <- 13069737
+
+black$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = black) 
+
+black_mean<-svymean(~work_distance,srs_design)
+black_SE<-SE(svymean(~work_distance, srs_design))
+black_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Asian Only###########
+asian <- complete %>%
+  filter(race == 3)
+
+n <- nrow(asian)
+N <- 2815059
+
+asian$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = asian) 
+
+asian_mean<-svymean(~work_distance,srs_design)
+asian_SE<-SE(svymean(~work_distance, srs_design))
+asian_CI<-confint(svymean(~work_distance, srs_design))
+
+###########American Indian, Alaskan Native###########
+natam <- complete %>%
+  filter(race == 4)
+
+n <- nrow(natam)
+N <- 1091518
+
+natam$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = natam) 
+
+natam_mean<-svymean(~work_distance,srs_design)
+natam_SE<-SE(svymean(~work_distance, srs_design))
+natam_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Native Hawaiian, other Pacific###########
+haw <- complete %>%
+  filter(race == 5)
+
+n <- nrow(haw)
+N <- 472510
+
+haw$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = haw) 
+
+haw_mean<-svymean(~work_distance,srs_design)
+haw_SE<-SE(svymean(~work_distance, srs_design))
+haw_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Multiracial###########
+mult <- complete %>%
+  filter(race == 6)
+
+n <- nrow(mult)
+N <- 817463
+
+mult$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = mult) 
+
+mult_mean<-svymean(~work_distance,srs_design)
+mult_SE<-SE(svymean(~work_distance, srs_design))
+mult_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Hispanic/Mexican###########
+hisp <- complete %>%
+  filter(race == 7)
+
+n <- nrow(hisp)
+N <-5152263
+
+hisp$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = hisp) 
+
+hisp_mean<-svymean(~work_distance,srs_design)
+hisp_SE<-SE(svymean(~work_distance, srs_design))
+hisp_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Other###########
+other <- complete %>%
+  filter(race == 97)
+
+n <- nrow(other)
+N <- 1930722
+
+other$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = other) 
+
+other_mean<-svymean(~work_distance,srs_design)
+other_SE<-SE(svymean(~work_distance, srs_design))
+other_CI<-confint(svymean(~work_distance, srs_design))
+
+###########Combined###########
+Mean<-c(white_mean, black_mean, asian_mean, natam_mean, haw_mean, mult_mean,hisp_mean,other_mean)
+SE<-c(white_SE, black_SE, asian_SE, natam_SE, haw_SE, mult_SE,hisp_SE,other_SE)
+CI<-rbind(white_CI, black_CI, asian_CI, natam_CI, haw_CI, mult_CI,hisp_CI,other_CI)
+
+race<-cbind(Mean, SE, CI)
+rownames(race)<-c("White", "African American, Black", "Asian Only", 
+                  "American Indian, Alaskan Native","Native Hawaiian, other Pacific", "Multiracial","Hispanic/Mexican","Other Specify")
+race
+
+race <- as.data.frame(race)
+race$lower_bound <- c(10,6,4,0,3,4,2,1)
+race$upper_bound <- c(20,23,27,33,23,19,23,29)
+race$type <- c("White","Black","Asian","Native American","Native Hawaiian","Multiracial","Hispanic/Mexican","Other")
+
+race %>%
+  ggplot(aes(x = type)) +
+  geom_boxplot(
+    aes(ymin =lower_bound,lower = `2.5 %`,middle = Mean,upper=`97.5 %`,ymax=upper_bound),
+    stat = "identity", fill = "#4271AE"
+  ) +
+  scale_y_continuous(name = "Distance of Travel to Work by Race (mi)",
+                     limits = c(-2,35)) +
+  xlab("Race") +
+  labs(title = "Travel Distances by Race") + 
+  theme(axis.text = element_text(size=10),
+        axis.title = element_text(size = 15),
+        title = element_text(size = 20))
+
+
+
+complete$race[complete$race == 1] <- "White"
+complete$race[complete$race == 2] <- "Black"
+complete$race[complete$race == 3] <- "Asian"
+complete$race[complete$race == 4] <- "Native American"
+complete$race[complete$race == 5] <- "Native Hawaiian"
+complete$race[complete$race == 6] <- "Multiracial"
+complete$race[complete$race == 7] <- "Hispanic/Mexican"
+complete$race[complete$race == 97] <- "Other"
+
+
+race_test = lm(work_distance ~ race, data = complete)
+
+anova(race_test)
+```
+
+
+```{r}
+#######################Age#######################
+complete$Age.Bracket[complete$age > 15 & complete$age < 26] <- "16-25"
+complete$Age.Bracket[complete$age > 25 & complete$age < 36] <- "26-35"
+complete$Age.Bracket[complete$age > 35 & complete$age < 46] <- "36-45"
+complete$Age.Bracket[complete$age > 45 & complete$age < 56] <- "46-55"
+complete$Age.Bracket[complete$age > 55 & complete$age < 66] <- "56-65"
+complete$Age.Bracket[complete$age > 65 & complete$age < 76] <- "66-75"
+complete$Age.Bracket[complete$age > 75 & complete$age < 86] <- "76-85"
+complete$Age.Bracket[complete$age > 85 & complete$age < 96] <- "86-95"
+complete$Age.Bracket <- factor(complete$Age.Bracket)
+###########16-25###########
+a <- complete %>%
+  filter(complete$age > 15 & complete$age < 26)
+
+n <- nrow(a)
+N <- 390986147588*n/nrow(complete)
+
+a$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = a) 
+
+a_mean<-svymean(~work_distance,srs_design)
+a_SE<-SE(svymean(~work_distance, srs_design))
+a_CI<-confint(svymean(~work_distance, srs_design))
+
+###########26-35###########
+b <- complete %>%
+  filter(complete$age > 25 & complete$age < 36)
+
+n <- nrow(b)
+N <- 390986147588*n/nrow(complete)
+
+b$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = b) 
+
+b_mean<-svymean(~work_distance,srs_design)
+b_SE<-SE(svymean(~work_distance, srs_design))
+b_CI<-confint(svymean(~work_distance, srs_design))
+
+###########36-45###########
+c <- complete %>%
+  filter(complete$age > 35 & complete$age < 46)
+
+n <- nrow(c)
+N <- 390986147588*n/nrow(complete)
+
+c$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = c) 
+
+c_mean<-svymean(~work_distance,srs_design)
+c_SE<-SE(svymean(~work_distance, srs_design))
+c_CI<-confint(svymean(~work_distance, srs_design))
+
+###########46-55###########
+d <- complete %>%
+  filter(complete$age > 45 & complete$age < 56)
+
+n <- nrow(d)
+N <- 390986147588*n/nrow(complete)
+
+d$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = d) 
+
+d_mean<-svymean(~work_distance,srs_design)
+d_SE<-SE(svymean(~work_distance, srs_design))
+d_CI<-confint(svymean(~work_distance, srs_design))
+
+###########56-65###########
+e <- complete %>%
+  filter(complete$age > 55 & complete$age < 66)
+
+n <- nrow(e)
+N <- 390986147588*n/nrow(complete)
+
+e$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = e) 
+
+e_mean<-svymean(~work_distance,srs_design)
+e_SE<-SE(svymean(~work_distance, srs_design))
+e_CI<-confint(svymean(~work_distance, srs_design))
+
+###########66-75###########
+f <- complete %>%
+  filter(complete$age > 65 & complete$age < 76)
+
+n <- nrow(f)
+N <- 390986147588*n/nrow(complete)
+
+f$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = f) 
+
+f_mean<-svymean(~work_distance,srs_design)
+f_SE<-SE(svymean(~work_distance, srs_design))
+f_CI<-confint(svymean(~work_distance, srs_design))
+
+###########76-85###########
+g <- complete %>%
+  filter(complete$age > 75 & complete$age < 86)
+
+n <- nrow(g)
+N <- 390986147588*n/nrow(complete)
+
+g$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = g) 
+
+g_mean<-svymean(~work_distance,srs_design)
+g_SE<-SE(svymean(~work_distance, srs_design))
+g_CI<-confint(svymean(~work_distance, srs_design))
+
+###########86-95###########
+h <- complete %>%
+  filter(complete$age > 85 & complete$age < 96)
+
+n <- nrow(h)
+N <- 1036697374 + 390986147588*n/nrow(complete)
+
+h$N <- N
+
+srs_design<-svydesign(id=~1, fpc=~N, data = h) 
+
+h_mean<-svymean(~work_distance,srs_design)
+h_SE<-SE(svymean(~work_distance, srs_design))
+h_CI<-confint(svymean(~work_distance, srs_design))
+```
+
+```{r,fig.width=12,fig.height=9}
+###########Combined###########
+Mean<-c(a_mean, b_mean, c_mean, d_mean, e_mean, f_mean,g_mean,h_mean)
+SE<-c(a_SE, b_SE, c_SE, d_SE, e_SE, f_SE,g_SE,h_SE)
+CI<-rbind(a_CI, b_CI, c_CI, d_CI, e_CI, f_CI,g_CI,h_CI)
+
+age<-cbind(Mean, SE, CI)
+rownames(age)<-c("16-25","26-35","36-45","46-55","56-65","66-75","76-85","86-95")
+age
+
+age <- as.data.frame(age)
+age$lower_bound <- c(2,6,7,6,5,3,0,0)
+age$upper_bound <- c(18,20,22,21,22,20,19,11)
+age$type <- c("16-25","26-35","36-45","46-55","56-65","66-75","76-85","86-95")
+
+
+
+age %>%
+  ggplot(aes(x = type)) +
+  geom_boxplot(
+    aes(ymin =lower_bound,lower = `2.5 %`,middle = Mean,upper=`97.5 %`,ymax=upper_bound),
+    stat = "identity", fill = "#4271AE"
+  ) +
+  scale_y_continuous(name = "Distance of Travel to Work by Age (mi)",
+                     limits = c(-1,25)) +
+  xlab("Age") +
+  labs(title = "Travel Distances by Age") + 
+  theme(axis.text = element_text(size=10),
+        axis.title = element_text(size = 15),
+        title = element_text(size = 20))
+
+age_test = lm(work_distance ~ Age.Bracket, data = complete)
+
+anova(age_test)
+```
+
+
+

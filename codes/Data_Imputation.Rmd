@@ -1,0 +1,172 @@
+---
+title: "Imputation"
+author: "Victor Yoolim Jin, 22612692"
+date: '2017 5 7 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd("rawDat/")
+library(ggplot2)
+library(dplyr)
+library(glmnet)
+library(class)
+```
+
+
+```{r data retrieval}
+#importing files
+raw_dat <- read.csv("rawDat/PERV2PUB.CSV")
+
+#subsetting data with only relevant variables
+initial.dat <- raw_dat[,c("HOUSEID", "PERSONID","VARSTRAT","GCDWORK", "WKFTPT", "HH_RACE", "WKRMHM", "DRIVER", "DTCOST", "DTCONJ", "R_SEX", "R_AGE", "HBHUR", "WRKCOUNT", "HHFAMINC")]
+str(initial.dat)
+
+#merging key columns
+initial.dat$PERSONID <- paste0(initial.dat$HOUSEID, "-", initial.dat$PERSONID)
+initial.dat$HOUSEID <- NULL
+#rename columns
+names(initial.dat) <- c("id", "strat", "work_distance", "work_type", "race", "WFH", "driver", "cost", "congestion", "gender", "age", "urban", "workers", "income")
+
+#get number of each strata before filtering
+initial.dat %>%
+  group_by(strat) %>%
+  summarise(count = length(strat))
+
+```
+
+```{r exploratory data}
+#filter out appropriate skips, because they are questions that were not asked based on previous answers.
+#use nearest-neighbor hot imputation to guestimate the rest (not ascertained, refused, don't know)
+##from work type, (-1 = appropriate skip, -7 = refused, -8 = don't know, -9 = not ascertained)
+length(which(initial.dat$work_type == -1)) #169833
+length(which(initial.dat$work_type == -7)) #48
+length(which(initial.dat$work_type == -8)) #232
+length(which(initial.dat$work_type == -9)) #2
+##from race, (-1 = appropriate skip, -7 = refused, -8 = don't know, -9 = not ascertained)
+length(which(initial.dat$race == -1)) #5
+length(which(initial.dat$race == -7)) #1723
+length(which(initial.dat$race == -8)) #721
+length(which(initial.dat$race == -9)) #77
+length(which(initial.dat$race == 97)) #3504
+##from WFH, (-1 = appropriate skip, -7 = refused, -8 = don't know, -9 = not ascertained)
+length(which(initial.dat$WFH == -1)) #187829
+length(which(initial.dat$WFH == -7)) #56
+length(which(initial.dat$WFH == -8)) #170
+length(which(initial.dat$WFH == -9)) #2
+##from driver, (-1 = appropriate skip, -9 = not ascertained)
+length(which(initial.dat$driver == -1)) #34307
+length(which(initial.dat$driver == -9)) #122
+##from cost, (-1 = appropriate skip, -7 = refused, -8 = don't know, -9 = not ascertained)
+length(which(initial.dat$cost == -1)) #232461
+length(which(initial.dat$cost == -7)) #15
+length(which(initial.dat$cost == -8)) #141
+length(which(initial.dat$cost == -9)) #1
+##from congestion, (-1 = appropriate skip, -7 = refused, -8 = don't know, -9 = not ascertained)
+length(which(initial.dat$congestion == -1)) #271919
+length(which(initial.dat$congestion == -7)) #10
+length(which(initial.dat$congestion == -8)) #71
+length(which(initial.dat$congestion == -9)) #None
+##from gender, all had to answer
+##from age, (92 = 89+)
+length(which(initial.dat$age == 92)) #3176
+##from urban, (-9 = N/A, C = Second City, X = Unassigned)
+length(which(initial.dat$urban == -9)) #2
+length(which(initial.dat$urban == "X")) #13
+##from workers, filter out 0
+length(which(initial.dat$workers == 0)) #89548
+##from income, filter out (-7 = refused, -8 = don't know, -9 = not ascertained)
+length(which(initial.dat$income == -7)) #15075
+length(which(initial.dat$income == -8)) #5419
+length(which(initial.dat$income == -9)) #64
+```
+
+```{r filtering data}
+#delete ineligible samples (with appropriate skips except congestion and cost, which are sequential questions based on car ownership)
+#filter out unwanted values
+attach(initial.dat)
+filtered.dat <- initial.dat[which(!work_type == -1 & !race == -1 & !driver == -1 & !age == 92 & !workers == 0 & !WFH == -1),]
+detach(initial.dat)
+#change appropriate values to NA
+
+attach(filtered.dat)
+filtered.dat$work_type[work_type == -7 | work_type == -8 | work_type == -9] <- NA
+filtered.dat$race[race == -7 | race == -8 | race == -9] <- NA
+filtered.dat$WFH[WFH == -7 | WFH == -8 | WFH == -9] <- NA
+filtered.dat$driver[driver == -9] <- NA
+filtered.dat$cost[cost == -1 | cost == -7 | cost == -8 | cost == -9] <- NA
+filtered.dat$congestion[congestion == -1 | congestion == -7 | congestion == -8 | congestion == -9] <- NA
+filtered.dat$urban[urban == -9] <- NA
+filtered.dat$income[income == -7 | income == -8 | income == -9] <- NA
+detach(filtered.dat)
+```
+
+```{r imputation preset}
+#factoring variables for multivariate logistic regression, as part of the nearest neighbors imputation
+filtered.dat$work_type <- as.factor(filtered.dat$work_type)
+filtered.dat$race <- as.factor(filtered.dat$race)
+filtered.dat$WFH <- as.factor(filtered.dat$WFH)
+filtered.dat$driver <- as.factor(filtered.dat$driver)
+filtered.dat$gender <- as.factor(filtered.dat$gender)
+filtered.dat$workers <- as.factor(filtered.dat$workers)
+complete <- filtered.dat[, !(colnames(filtered.dat) %in% c("cost", "congestion", "id"))]
+```
+
+```{r imputation function}
+impute <- function(column, dat = complete, type) {
+  #convert parameter into valid type
+  colum <- deparse(substitute(column))
+  #filter complete cases of complete for regression
+  train.df <- dat[complete.cases(dat),]
+  #convert x into valid parameter 
+  x <- model.matrix(as.formula(paste("~. -",colum, sep = "")), data = train.df)
+  print(as.data.frame(x))
+  #cases based on type
+  if (type == "multinomial") {
+    fit <- glmnet(x, train.df[, names(train.df) == colum], 
+                  family = "multinomial", type.multinomial = "grouped")
+  } else if (type == "binomial") {
+    fit <- glmnet(x, train.df[, names(train.df) == colum], family = "binomial")
+  } 
+  #find rows in "complete" data frame that should be pasted
+  na.column <- which(is.na(complete[, names(complete) == colum]))
+  na.complete <- which(complete.cases(complete[, names(complete) != colum]))
+  rows <- intersect(na.column, na.complete)
+  #predict values
+  test.df <- dat[rows, names(dat) != colum]
+  print(test.df)
+  y <- model.matrix(~., data = test.df)
+  label <- predict(fit, newx = y, type = "class", s = 0)
+  #return a data frame with row numbers and predicted values
+  tmp <- cbind.data.frame(rows, label)
+  colnames(tmp) <- c("rows", "predictions")
+  tmp
+}
+```
+
+```{r imputing}
+temp <- impute(work_type, complete, "multinomial")
+complete[temp$rows, "work_type"] = temp$predictions
+temp <- impute(race, complete, "multinomial")
+complete[temp$rows, "race"] = temp$predictions
+temp <- impute(WFH, complete, "binomial")
+complete[temp$rows, "WFH"] = temp$predictions
+temp <- impute(urban, complete, "multinomial")
+complete[temp$rows, "urban"] = temp$predictions
+complete[complete.cases(complete),]
+rows <- which(complete.cases(complete))
+final.df <- cbind.data.frame(complete[rows,], filtered.dat[rows, c("cost", "congestion", "id")])
+nrow(final.df) #115389
+```
+```{r exporting}
+write.csv(final.df, "cleanedDat/final.csv")
+```
+
+
+
+
+
+
+
+
+
