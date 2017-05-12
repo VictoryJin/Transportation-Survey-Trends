@@ -1,0 +1,48 @@
+#File
+- fulltime.csv: data of full-time workers who have GCDWORK > 0
+- parttime.csv: data of part-time workers who have GCDWORK > 0
+
+
+Variables:
+PERSONID: HouseholdID & PersonID concatenated
+VARSTRAT: ID of Strat.
+GCDWORK: Linear distance to work.
+WKFTPT: work full or part time. 1 - full time, 2 - part time, 3 - multiple jobs
+HH_RACE: Race of respondant
+  -1 = Appropriate skip
+  -7 = Refused
+  -8 = Don't know
+  -9 = Not ascertained
+  01 = White
+  02 = African American, Black
+  03 = Asian Only
+  04 = American Indian, Alaskan Native
+  05 = Native Hawaiian, other Pacific
+  06 = Multiracial
+  07 = Hispanic/Mexican
+WKRMHM: Has the option to work from home.
+  1 = yes
+  2 = no
+DRIVER: driver status of sample.
+  1 = driver
+  2 = not a driver
+DTCOST: view on price of travel.
+  1 = little
+  2 = moderate
+  3 = big issue
+DTCONJ: view on highway congestion.
+  1 = little
+  2 = moderate
+  3 = big issue
+R_SEX: Respondant gender.
+  1 = male
+  2 = female
+R_AGE: Respondant age. (needs to be grouped, WIP)
+HBHUR: Urban/Rural indicator.
+  S = Suburban
+  TC = Town and County
+  U = Urban
+WRKCOUNT: # of workers in HH
+HHFAMINC: Derived total HH income.
+  01 = $5,000.
+  +$5,000 for each group until 10.
